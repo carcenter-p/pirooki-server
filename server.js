@@ -229,6 +229,66 @@ app.patch('/api/orders/:ordname/status', requireAuth, async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════
+// ADMIN ROUTES — ניהול משתמשים
+// ════════════════════════════════════════════════════
+
+function requireAdmin(req, res, next) {
+  requireAuth(req, res, () => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'גישה מותרת למנהלים בלבד' });
+    }
+    next();
+  });
+}
+
+// GET /api/admin/users — רשימת כל המשתמשים
+app.get('/api/admin/users', requireAdmin, (req, res) => {
+  const safe = users.map(u => ({
+    id: u.id, username: u.username, display: u.display, role: u.role
+  }));
+  res.json(safe);
+});
+
+// POST /api/admin/users — הוסף משתמש
+app.post('/api/admin/users', requireAdmin, (req, res) => {
+  const { username, display, password, role } = req.body;
+  if (!username || !display || !password) {
+    return res.status(400).json({ error: 'יש למלא את כל השדות' });
+  }
+  if (users.find(u => u.username === username)) {
+    return res.status(400).json({ error: 'שם המשתמש כבר קיים' });
+  }
+  const newId = Math.max(...users.map(u => u.id)) + 1;
+  const newUser = { id: newId, username, display, password, role: role || 'worker' };
+  users.push(newUser);
+  res.json({ success: true, user: { id: newId, username, display, role: newUser.role } });
+});
+
+// PATCH /api/admin/users/:id — עדכן משתמש
+app.patch('/api/admin/users/:id', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id);
+  const u = users.find(x => x.id === id);
+  if (!u) return res.status(404).json({ error: 'משתמש לא נמצא' });
+  const { username, display, password, role } = req.body;
+  if (username) u.username = username;
+  if (display) u.display = display;
+  if (password) u.password = password;
+  if (role) u.role = role;
+  res.json({ success: true, user: { id: u.id, username: u.username, display: u.display, role: u.role } });
+});
+
+// DELETE /api/admin/users/:id — מחק משתמש
+app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id);
+  const u = users.find(x => x.id === id);
+  if (!u) return res.status(404).json({ error: 'משתמש לא נמצא' });
+  if (u.role === 'admin') return res.status(400).json({ error: 'לא ניתן למחוק מנהל' });
+  const idx = users.indexOf(u);
+  users.splice(idx, 1);
+  res.json({ success: true });
+});
+
+// ════════════════════════════════════════════════════
 // HEALTH CHECK
 // ════════════════════════════════════════════════════
 app.get('/health', (req, res) => {
