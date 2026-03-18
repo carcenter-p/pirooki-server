@@ -92,7 +92,13 @@ app.post('/api/login', async (req, res) => {
     return res.status(401).json({ error: 'שם משתמש או סיסמה שגויים' });
   }
 
-  const valid = await bcrypt.compare(password, user.password);
+  // תומך גם בטקסט רגיל וגם ב-bcrypt
+  let valid = false;
+  if (user.password.startsWith('$2')) {
+    valid = await bcrypt.compare(password, user.password);
+  } else {
+    valid = (password === user.password);
+  }
   if (!valid) {
     return res.status(401).json({ error: 'שם משתמש או סיסמה שגויים' });
   }
