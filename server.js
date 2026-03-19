@@ -191,17 +191,18 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     const { regnum, parts } = req.body;
     const results = [];
     for (const part of parts) {
-      // בדוק אם השורה קיימת
-      const existing = await priorityGet(
-        `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}' and PARTNAME eq '${part.partname}'&$select=PART,PARTNAME`
-      );
-      let result;
-      if (existing.value && existing.value.length > 0) {
-        result = await priorityPatch(`QAMF_SERNMECLOLF(${existing.value[0].PART})`, { UNLOADED: 'Y' });
-      } else {
-        result = await priorityPost('QAMF_SERNMECLOLF', { SERNUM: regnum, PARTNAME: part.partname, UNLOADED: 'Y' });
+      // נסה POST תחילה — אם השורה קיימת פריורטי יעדכן, אם לא יצור
+      try {
+        const result = await priorityPost('QAMF_SERNMECLOLF', {
+          SERNUM:   regnum,
+          PARTNAME: part.partname,
+          UNLOADED: 'Y'
+        });
+        results.push(result);
+      } catch(e) {
+        console.error('dismantle part error:', part.partname, e.message);
+        results.push({ error: e.message });
       }
-      results.push(result);
     }
     res.json({ success: true, results });
   } catch (err) { console.error('dismantle error:', err.message); res.status(500).json({ error: 'שגיאה בסימון פירוק', details: err.message }); }
