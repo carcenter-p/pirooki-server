@@ -191,13 +191,18 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     const { regnum, parts } = req.body;
     const results = [];
     for (const part of parts) {
-      // נסה POST תחילה — אם השורה קיימת פריורטי יעדכן, אם לא יצור
       try {
-        const result = await priorityPost('QAMF_SERNMECLOLF', {
-          SERNUM:   regnum,
-          PARTNAME: part.partname,
-          UNLOADED: 'Y'
-        });
+        // בדוק אם השורה קיימת
+        const existing = await priorityGet(
+          `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}' and PARTNAME eq '${part.partname}'&$select=PART,SERN`
+        );
+        let result;
+        if (existing.value && existing.value.length > 0) {
+          const { PART, SERN } = existing.value[0];
+          result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
+        } else {
+          result = await priorityPost('QAMF_SERNMECLOLF', { SERNUM: regnum, PARTNAME: part.partname, UNLOADED: 'Y' });
+        }
         results.push(result);
       } catch(e) {
         console.error('dismantle part error:', part.partname, e.message);
@@ -212,11 +217,12 @@ app.patch('/api/parts/undo', requireAuth, async (req, res) => {
   try {
     const { regnum, partname } = req.body;
     const existing = await priorityGet(
-      `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}' and PARTNAME eq '${partname}'&$select=PART`
+      `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}' and PARTNAME eq '${partname}'&$select=PART,SERN`
     );
     if (!existing.value || existing.value.length === 0)
       return res.status(404).json({ error: 'שורה לא נמצאה' });
-    const result = await priorityPatch(`QAMF_SERNMECLOLF(${existing.value[0].PART})`, { UNLOADED: null });
+    const { PART, SERN } = existing.value[0];
+    const result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: null });
     res.json({ success: true, result });
   } catch (err) { console.error('undo error:', err.message); res.status(500).json({ error: 'שגיאה בביטול פירוק', details: err.message }); }
 });
