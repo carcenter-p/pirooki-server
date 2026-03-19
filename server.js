@@ -204,16 +204,16 @@ app.patch('/api/parts/undo', requireAuth, async (req, res) => {
 
 app.get('/api/orders', requireAuth, async (req, res) => {
   try {
-    const data = await priorityGet(`ORDERS?$filter=QAMF_STATUS ne 'פורק'&$select=ORDNAME,CDES,CURDATE,QAMF_STATUS&$expand=ORDERITEMS($select=PARTNAME,PARTDES,TQUANT)`);
+    const data = await priorityGet(`ORDERS?$filter=ORDSTATUSDES eq 'לפירוק' or ORDSTATUSDES eq 'בעבודה'&$select=ORDNAME,CDES,CURDATE,ORDSTATUSDES,QAMF_LICENSEPLATE,QAMF_PARTDES,QAMF_PARTNAME&$orderby=CURDATE desc&$top=50`);
     res.json(data.value || []);
-  } catch (err) { res.status(500).json({ error: 'שגיאה בשליפת הזמנות' }); }
+  } catch (err) { console.error('ORDERS ERROR:', err.message); res.status(500).json({ error: 'שגיאה בשליפת הזמנות', details: err.message }); }
 });
 
 app.patch('/api/orders/:ordname/status', requireAuth, async (req, res) => {
   try {
-    const result = await priorityPatch(`ORDERS('${req.params.ordname}')`, { QAMF_STATUS: req.body.status });
+    const result = await priorityPatch(`ORDERS('${req.params.ordname}')`, { ORDSTATUSDES: req.body.status });
     res.json({ success: true, result });
-  } catch (err) { res.status(500).json({ error: 'שגיאה בעדכון סטטוס' }); }
+  } catch (err) { console.error('STATUS ERROR:', err.message); res.status(500).json({ error: 'שגיאה בעדכון סטטוס', details: err.message }); }
 });
 
 // ════════════════════════════════════════════════════
