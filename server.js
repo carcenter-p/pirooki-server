@@ -172,8 +172,7 @@ app.get('/api/parts/:regnum', requireAuth, async (req, res) => {
     );
     if (!vdata.value || vdata.value.length === 0) return res.json([]);
     const sern = vdata.value[0].SERN;
-    const sernum = vdata.value[0].SERNUM;
-    const data = await priorityGet(`QAMF_SERNMECLOL?$filter=SERN eq ${sern}&$select=SERN,PARTNAME,PARTDES,MECLOL,DISMANTLED`);
+    const data = await priorityGet(`QAMF_SERNMECLOLF?$filter=SERN eq ${sern}&$select=SERN,SERNUM,PARTNAME,PARTDES,UNLOADED,PART`);
     res.json(data.value || []);
   } catch (err) { console.error('PARTS ERROR:', err.message); res.status(500).json({ error: 'שגיאה בשליפת חלקים', details: err.message }); }
 });
