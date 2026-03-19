@@ -158,7 +158,7 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
 
 app.get('/api/vehicle/:regnum', requireAuth, async (req, res) => {
   try {
-    const data = await priorityGet(`SERNUMBERS?$filter=SERNUM eq '${req.params.regnum}'&$select=SERNUM,PARTNAME,PARTDES,SERDES,STATUSDESC`);
+    const data = await priorityGet(`SERNUMBERS?$filter=QAMF_LICENSEPLATE eq '${req.params.regnum}'&$select=SERNUM,SERN,PARTNAME,PARTDES,QAMF_LICENSEPLATE,QAMF_STATDES,QAMF_TOZAR,CDES,ODATE`);
     if (!data.value || data.value.length === 0) return res.status(404).json({ error: 'רכב לא נמצא' });
     res.json(data.value[0]);
   } catch (err) { console.error('VEHICLE ERROR:', err.message); res.status(500).json({ error: 'שגיאה בשליפת נתוני רכב', details: err.message }); }
@@ -166,7 +166,14 @@ app.get('/api/vehicle/:regnum', requireAuth, async (req, res) => {
 
 app.get('/api/parts/:regnum', requireAuth, async (req, res) => {
   try {
-    const data = await priorityGet(`QAMF_SERNMECLOL?$filter=SERNUM eq '${req.params.regnum}'&$select=SERNUM,PARTNAME,PARTDES,MECLOL,DISMANTLED`);
+    // קודם מצא את ה-SERN לפי מספר רישוי
+    const vdata = await priorityGet(
+      `SERNUMBERS?$filter=QAMF_LICENSEPLATE eq '${req.params.regnum}'&$select=SERN,SERNUM`
+    );
+    if (!vdata.value || vdata.value.length === 0) return res.json([]);
+    const sern = vdata.value[0].SERN;
+    const sernum = vdata.value[0].SERNUM;
+    const data = await priorityGet(`QAMF_SERNMECLOL?$filter=SERN eq ${sern}&$select=SERN,PARTNAME,PARTDES,MECLOL,DISMANTLED`);
     res.json(data.value || []);
   } catch (err) { console.error('PARTS ERROR:', err.message); res.status(500).json({ error: 'שגיאה בשליפת חלקים', details: err.message }); }
 });
