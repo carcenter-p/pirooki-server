@@ -204,7 +204,7 @@ app.patch('/api/parts/undo', requireAuth, async (req, res) => {
 
 app.get('/api/orders', requireAuth, async (req, res) => {
   try {
-    const data = await priorityGet(`ORDERS?$filter=ORDSTATUSDES eq 'לפירוק' or ORDSTATUSDES eq 'בעבודה'&$select=ORDNAME,CDES,CURDATE,ORDSTATUSDES,QAMF_LICENSEPLATE,QAMF_PARTDES,QAMF_PARTNAME&$orderby=CURDATE desc&$top=50`);
+    const data = await priorityGet(`ORDISINGLE?$filter=(ORDSTATUSDES eq 'לפירוק' or ORDSTATUSDES eq 'בעבודה') and (ORDISTATUSDES eq 'לפירוק' or ORDISTATUSDES eq 'בעבודה' or ORDISTATUSDES eq null)&$select=ORDNAME,CDES,CURDATE,ORDSTATUSDES,ORDISTATUSDES,PARTNAME,PDES,TQUANT,QAMF_LICENSEPLATE,SPEC2,SPEC4,SPEC18&$orderby=CURDATE desc&$top=100`);
     res.json(data.value || []);
   } catch (err) { console.error('ORDERS ERROR:', err.message); res.status(500).json({ error: 'שגיאה בשליפת הזמנות', details: err.message }); }
 });
