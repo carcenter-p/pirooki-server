@@ -158,7 +158,7 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
 
 app.get('/api/vehicle/:regnum', requireAuth, async (req, res) => {
   try {
-    const data = await priorityGet(`SERNUMBERS?$filter=QAMF_LICENSEPLATE eq '${req.params.regnum}'&$select=SERNUM,SERN,PARTNAME,PARTDES,QAMF_LICENSEPLATE,QAMF_STATDES,QAMF_TOZAR,CDES,ODATE`);
+    const data = await priorityGet(`SERNUMBERS?$filter=QAMF_LICENSEPLATE eq '${req.params.regnum}'&$select=SERNUM,SERN,PARTNAME,PARTDES,QAMF_LICENSEPLATE,QAMF_TOZAR,QAME_GIMUR,QAME_TIMEGETROAD,QAMF_OOZMETER,ODATE`);
     if (!data.value || data.value.length === 0) return res.status(404).json({ error: 'רכב לא נמצא' });
     res.json(data.value[0]);
   } catch (err) { console.error('VEHICLE ERROR:', err.message); res.status(500).json({ error: 'שגיאה בשליפת נתוני רכב', details: err.message }); }
