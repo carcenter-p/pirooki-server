@@ -211,7 +211,15 @@ app.get('/api/orders', requireAuth, async (req, res) => {
 
 app.patch('/api/orders/:ordname/status', requireAuth, async (req, res) => {
   try {
-    const result = await priorityPatch(`ORDERS('${req.params.ordname}')`, { ORDSTATUSDES: req.body.status });
+    const { status, ordi } = req.body;
+    let result;
+    if (ordi) {
+      // עדכון סטטוס שורה
+      result = await priorityPatch(`ORDISINGLE(${ordi})`, { ORDISTATUSDES: status });
+    } else {
+      // עדכון סטטוס הזמנה
+      result = await priorityPatch(`ORDERS('${req.params.ordname}')`, { ORDSTATUSDES: status });
+    }
     res.json({ success: true, result });
   } catch (err) { console.error('STATUS ERROR:', err.message); res.status(500).json({ error: 'שגיאה בעדכון סטטוס', details: err.message }); }
 });
