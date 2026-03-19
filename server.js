@@ -166,14 +166,23 @@ app.get('/api/vehicle/:regnum', requireAuth, async (req, res) => {
 
 app.get('/api/parts/:regnum', requireAuth, async (req, res) => {
   try {
-    // קודם מצא את ה-SERN לפי מספר רישוי
-    const vdata = await priorityGet(
-      `SERNUMBERS?$filter=QAMF_LICENSEPLATE eq '${req.params.regnum}'&$select=SERN,SERNUM`
-    );
-    if (!vdata.value || vdata.value.length === 0) return res.json([]);
-    const sern = vdata.value[0].SERN;
-    const data = await priorityGet(`QAMF_SERNMECLOLF?$filter=SERNUM eq '${req.params.regnum}'&$select=SERN,SERNUM,PARTNAME,PARTDES,UNLOADED,PART`);
-    res.json(data.value || []);
+    const regnum = req.params.regnum;
+    // שלוף רשימת מכלולים קבועה
+    const mechlolData = await priorityGet(`LOGPART?$filter=QAMF_MECHLOL eq 'Y'&$select=PARTNAME,PARTDES`);
+    const mechlolList = mechlolData.value || [];
+    // שלוף מה שפורק לרכב זה
+    const unloadedData = await priorityGet(`QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}'&$select=PARTNAME,UNLOADED,PART`);
+    const unloadedMap = {};
+    (unloadedData.value || []).forEach(p => { unloadedMap[p.PARTNAME] = p; });
+    // שלב — לכל מכלול סמן אם פורק
+    const result = mechlolList.map(m => ({
+      PARTNAME: m.PARTNAME,
+      PARTDES: m.PARTDES,
+      MECLOL: m.PARTNAME,
+      DISMANTLED: unloadedMap[m.PARTNAME] ? unloadedMap[m.PARTNAME].UNLOADED : null,
+      PART: unloadedMap[m.PARTNAME] ? unloadedMap[m.PARTNAME].PART : null
+    }));
+    res.json(result);
   } catch (err) { console.error('PARTS ERROR:', err.message); res.status(500).json({ error: 'שגיאה בשליפת חלקים', details: err.message }); }
 });
 
