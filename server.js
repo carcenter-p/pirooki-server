@@ -191,19 +191,33 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     const { regnum, parts } = req.body;
     const results = [];
     for (const part of parts) {
-      const result = await priorityPost('QAMF_SERNMECLOL', { SERNUM: regnum, PARTNAME: part.partname, MECLOL: part.meclol, DISMANTLED: 'Y' });
+      // בדוק אם השורה קיימת
+      const existing = await priorityGet(
+        `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}' and PARTNAME eq '${part.partname}'&$select=PART,PARTNAME`
+      );
+      let result;
+      if (existing.value && existing.value.length > 0) {
+        result = await priorityPatch(`QAMF_SERNMECLOLF(${existing.value[0].PART})`, { UNLOADED: 'Y' });
+      } else {
+        result = await priorityPost('QAMF_SERNMECLOLF', { SERNUM: regnum, PARTNAME: part.partname, UNLOADED: 'Y' });
+      }
       results.push(result);
     }
     res.json({ success: true, results });
-  } catch (err) { res.status(500).json({ error: 'שגיאה בסימון פירוק' }); }
+  } catch (err) { console.error('dismantle error:', err.message); res.status(500).json({ error: 'שגיאה בסימון פירוק', details: err.message }); }
 });
 
 app.patch('/api/parts/undo', requireAuth, async (req, res) => {
   try {
     const { regnum, partname } = req.body;
-    const result = await priorityPatch(`QAMF_SERNMECLOL(SERNUM='${regnum}',PARTNAME='${partname}')`, { DISMANTLED: '' });
+    const existing = await priorityGet(
+      `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}' and PARTNAME eq '${partname}'&$select=PART`
+    );
+    if (!existing.value || existing.value.length === 0)
+      return res.status(404).json({ error: 'שורה לא נמצאה' });
+    const result = await priorityPatch(`QAMF_SERNMECLOLF(${existing.value[0].PART})`, { UNLOADED: null });
     res.json({ success: true, result });
-  } catch (err) { res.status(500).json({ error: 'שגיאה בביטול פירוק' }); }
+  } catch (err) { console.error('undo error:', err.message); res.status(500).json({ error: 'שגיאה בביטול פירוק', details: err.message }); }
 });
 
 // ════════════════════════════════════════════════════
