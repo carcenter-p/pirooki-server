@@ -192,17 +192,11 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     const results = [];
     for (const part of parts) {
       try {
-        // בדוק אם השורה קיימת
-        const existing = await priorityGet(
-          `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}' and PARTNAME eq '${part.partname}'&$select=PART,SERN`
-        );
-        let result;
-        if (existing.value && existing.value.length > 0) {
-          const { PART, SERN } = existing.value[0];
-          result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
-        } else {
-          result = await priorityPost('QAMF_SERNMECLOLF', { SERNUM: regnum, PARTNAME: part.partname, UNLOADED: 'Y' });
-        }
+        const result = await priorityPost('QAMF_SERNMECLOLF', {
+          SERNUM:   regnum,
+          PARTNAME: part.partname,
+          UNLOADED: 'Y'
+        });
         results.push(result);
       } catch(e) {
         console.error('dismantle part error:', part.partname, e.message);
