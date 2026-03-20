@@ -8,7 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 app.use(express.json());
-app.use((req, res, next) => { res.setTimeout(120000); next(); });
+app.use((req, res, next) => { res.setTimeout(300000); next(); });
 app.use(cors());
 
 const PRIORITY_BASE = process.env.PRIORITY_BASE_URL;
@@ -68,7 +68,7 @@ async function priorityPost(path, body) {
     method: 'POST',
     headers: { 'Authorization': priorityAuth, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  }, 60000);
+  }, 120000);
   if (!res.ok) throw new Error(`Priority error: ${res.status}`);
   return res.json();
 }
@@ -78,7 +78,7 @@ async function priorityPatch(path, body) {
     method: 'PATCH',
     headers: { 'Authorization': priorityAuth, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  }, 60000);
+  }, 120000);
   if (!res.ok) throw new Error(`Priority error: ${res.status}`);
   return res.json();
 }
