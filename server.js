@@ -68,7 +68,7 @@ async function priorityPost(path, body) {
     method: 'POST',
     headers: { 'Authorization': priorityAuth, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  }, 30000);
+  }, 15000);
   if (!res.ok) throw new Error(`Priority error: ${res.status}`);
   return res.json();
 }
@@ -78,7 +78,7 @@ async function priorityPatch(path, body) {
     method: 'PATCH',
     headers: { 'Authorization': priorityAuth, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  }, 30000);
+  }, 15000);
   if (!res.ok) throw new Error(`Priority error: ${res.status}`);
   return res.json();
 }
@@ -205,24 +205,17 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
   try {
     const { regnum, parts } = req.body;
     const results = [];
-    // שלוף את כל השורות הקיימות לרכב בקריאה אחת
-    const existing = await priorityGet(
-      `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}'&$select=PART,SERN,PARTNAME`
-    );
-    const existingMap = {};
-    (existing.value || []).forEach(r => { existingMap[r.PARTNAME] = r; });
-
-    // עדכן רק חלקים שקיימים בטבלה — בקבוצות של 5 במקביל
-    const toDismantle = parts.filter(p => existingMap[p.partname]);
-    console.log('dismantling:', toDismantle.length, 'of', parts.length, 'parts');
-
-    const chunkSize = 5;
-    for (let i = 0; i < toDismantle.length; i += chunkSize) {
-      const chunk = toDismantle.slice(i, i + chunkSize);
+    // שלח רק את החלקים הנבחרים — ללא GET מיותר
+    console.log('dismantling:', parts.length, 'parts');
+    const chunkSize = 10;
+    for (let i = 0; i < parts.length; i += chunkSize) {
+      const chunk = parts.slice(i, i + chunkSize);
       const chunkResults = await Promise.all(chunk.map(async part => {
         try {
-          const { PART, SERN } = existingMap[part.partname];
-          const result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
+          const result = await priorityPatch(
+            `QAMF_SERNMECLOLF(PART=${part.part},SERN=${part.sern})`,
+            { UNLOADED: 'Y' }
+          );
           console.log('dismantled OK:', part.partname);
           return result;
         } catch(e) {
