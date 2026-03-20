@@ -212,27 +212,25 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     const existingMap = {};
     (existing.value || []).forEach(r => { existingMap[r.PARTNAME] = r; });
 
-    // עדכן בסדרה — נסה PATCH, אם נכשל נסה POST
-    for (const part of parts) {
-      try {
-        let result;
-        if (existingMap[part.partname]) {
+    // עדכן רק חלקים שקיימים בטבלה — בקבוצות של 5 במקביל
+    const toDismantle = parts.filter(p => existingMap[p.partname]);
+    console.log('dismantling:', toDismantle.length, 'of', parts.length, 'parts');
+
+    const chunkSize = 5;
+    for (let i = 0; i < toDismantle.length; i += chunkSize) {
+      const chunk = toDismantle.slice(i, i + chunkSize);
+      const chunkResults = await Promise.all(chunk.map(async part => {
+        try {
           const { PART, SERN } = existingMap[part.partname];
-          try {
-            result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
-          } catch(patchErr) {
-            console.log('PATCH failed, trying POST for:', part.partname);
-            result = await priorityPost('QAMF_SERNMECLOLF', { SERNUM: regnum, PARTNAME: part.partname, UNLOADED: 'Y' });
-          }
-        } else {
-          result = await priorityPost('QAMF_SERNMECLOLF', { SERNUM: regnum, PARTNAME: part.partname, UNLOADED: 'Y' });
+          const result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
+          console.log('dismantled OK:', part.partname);
+          return result;
+        } catch(e) {
+          console.error('dismantle error:', part.partname, e.message);
+          return { error: e.message, partname: part.partname };
         }
-        results.push(result);
-        console.log('dismantled OK:', part.partname);
-      } catch(e) {
-        console.error('dismantle part error:', part.partname, e.message);
-        results.push({ error: e.message, partname: part.partname });
-      }
+      }));
+      results.push(...chunkResults);
     }
     res.json({ success: true, results });
   } catch (err) { console.error('dismantle error:', err.message); res.status(500).json({ error: 'שגיאה בסימון פירוק', details: err.message }); }
@@ -247,7 +245,8 @@ app.patch('/api/parts/undo', requireAuth, async (req, res) => {
     if (!existing.value || existing.value.length === 0)
       return res.status(404).json({ error: 'שורה לא נמצאה' });
     const { PART, SERN } = existing.value[0];
-    const result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: null });
+    console.log('undo:', partname, 'PART:', PART, 'SERN:', SERN);
+    const result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: '' });
     res.json({ success: true, result });
   } catch (err) { console.error('undo error:', err.message); res.status(500).json({ error: 'שגיאה בביטול פירוק', details: err.message }); }
 });
