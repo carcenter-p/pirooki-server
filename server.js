@@ -287,14 +287,16 @@ app.patch('/api/orders/:ordname/status', requireAuth, async (req, res) => {
 app.post('/api/transfer/bring', requireAuth, async (req, res) => {
   try {
     const { ordname, sernum, warhsname, locname, towarhsname, tolocname } = req.body;
-    const result = await priorityPost('DOCUMENTS_T', {
+    const body = {
       TYPE: 'T',
-      STCODE: '1',
-      WARHSNAME: warhsname || '100',
-      LOCNAME: locname || '0',
-      TOWARHSNAME: towarhsname || '100',
-      TOLOCNAME: tolocname || '0'
-    });
+      WARHSNAME: warhsname,
+      LOCNAME: locname,
+      TOWARHSNAME: towarhsname,
+      TOLOCNAME: tolocname
+    };
+    if (stcode) body.STCODE = stcode;
+    console.log('transfer POST body:', JSON.stringify(body));
+    const result = await priorityPost('DOCUMENTS_T', body);
     console.log('transfer created:', result);
     res.json({ success: true, result });
   } catch(err) {
