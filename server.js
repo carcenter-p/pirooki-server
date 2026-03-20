@@ -24,6 +24,20 @@ const supabase = createClient(
 
 const priorityAuth = 'Basic ' + Buffer.from(`${PRIORITY_USER}:${PRIORITY_PASS}`).toString('base64');
 
+// fetch עם timeout
+async function fetchWithTimeout(url, opts, ms=25000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { ...opts, signal: controller.signal });
+    clearTimeout(timer);
+    return res;
+  } catch(e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
 // ── Middleware ──────────────────────────────────────
 function requireAuth(req, res, next) {
   const header = req.headers.authorization;
@@ -41,7 +55,7 @@ function requireAdmin(req, res, next) {
 
 // ── Priority helpers ────────────────────────────────
 async function priorityGet(path) {
-  const res = await fetch(`${PRIORITY_BASE}/${path}`, {
+  const res = await fetchWithTimeout(`${PRIORITY_BASE}/${path}`, {
     headers: { 'Authorization': priorityAuth, 'Content-Type': 'application/json' }
   });
   if (!res.ok) throw new Error(`Priority error: ${res.status}`);
@@ -49,21 +63,21 @@ async function priorityGet(path) {
 }
 
 async function priorityPost(path, body) {
-  const res = await fetch(`${PRIORITY_BASE}/${path}`, {
+  const res = await fetchWithTimeout(`${PRIORITY_BASE}/${path}`, {
     method: 'POST',
     headers: { 'Authorization': priorityAuth, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  });
+  }, 30000);
   if (!res.ok) throw new Error(`Priority error: ${res.status}`);
   return res.json();
 }
 
 async function priorityPatch(path, body) {
-  const res = await fetch(`${PRIORITY_BASE}/${path}`, {
+  const res = await fetchWithTimeout(`${PRIORITY_BASE}/${path}`, {
     method: 'PATCH',
     headers: { 'Authorization': priorityAuth, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  });
+  }, 30000);
   if (!res.ok) throw new Error(`Priority error: ${res.status}`);
   return res.json();
 }
@@ -190,17 +204,28 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
   try {
     const { regnum, parts } = req.body;
     const results = [];
+    // שלוף את כל השורות הקיימות לרכב בקריאה אחת
+    const existing = await priorityGet(
+      `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}'&$select=PART,SERN,PARTNAME`
+    );
+    const existingMap = {};
+    (existing.value || []).forEach(r => { existingMap[r.PARTNAME] = r; });
+
+    // עדכן בסדרה — פריורטי לא תומך במקביל
     for (const part of parts) {
       try {
-        const result = await priorityPost('QAMF_SERNMECLOLF', {
-          SERNUM:   regnum,
-          PARTNAME: part.partname,
-          UNLOADED: 'Y'
-        });
+        let result;
+        if (existingMap[part.partname]) {
+          const { PART, SERN } = existingMap[part.partname];
+          result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
+        } else {
+          result = await priorityPost('QAMF_SERNMECLOLF', { SERNUM: regnum, PARTNAME: part.partname, UNLOADED: 'Y' });
+        }
         results.push(result);
+        console.log('dismantled:', part.partname);
       } catch(e) {
         console.error('dismantle part error:', part.partname, e.message);
-        results.push({ error: e.message });
+        results.push({ error: e.message, partname: part.partname });
       }
     }
     res.json({ success: true, results });
