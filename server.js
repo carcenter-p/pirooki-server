@@ -281,6 +281,29 @@ app.patch('/api/orders/:ordname/status', requireAuth, async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════
+// TRANSFER — העברות בין מחסנים
+// ════════════════════════════════════════════════════
+
+app.post('/api/transfer/bring', requireAuth, async (req, res) => {
+  try {
+    const { ordname, sernum, warhsname, locname, towarhsname, tolocname } = req.body;
+    const result = await priorityPost('DOCUMENTS_T', {
+      TYPE: 'T',
+      STCODE: '1',
+      WARHSNAME: warhsname || '100',
+      LOCNAME: locname || '0',
+      TOWARHSNAME: towarhsname || '100',
+      TOLOCNAME: tolocname || '0'
+    });
+    console.log('transfer created:', result);
+    res.json({ success: true, result });
+  } catch(err) {
+    console.error('transfer error:', err.message);
+    res.status(500).json({ error: 'שגיאה ביצירת העברה', details: err.message });
+  }
+});
+
+// ════════════════════════════════════════════════════
 // HEALTH
 // ════════════════════════════════════════════════════
 
