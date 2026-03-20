@@ -220,19 +220,22 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     const toDismantle = parts.filter(p => existingMap[p.partname]);
     console.log('dismantling:', toDismantle.length, 'of', parts.length, 'parts');
 
-    // שלח לפריורטי בסדרה עם await
-    for (const part of toDismantle) {
-      try {
-        const { PART, SERN } = existingMap[part.partname];
-        await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
-        console.log('dismantled OK:', part.partname);
-        results.push({ partname: part.partname, ok: true });
-      } catch(e) {
-        console.error('dismantle error:', part.partname, e.message);
-        results.push({ error: e.message, partname: part.partname });
+    // החזר תשובה מיד לאפליקציה
+    res.json({ success: true, count: toDismantle.length });
+
+    // שלח לפריורטי ברקע — בלי לחסום את ה-response
+    (async () => {
+      for (const part of toDismantle) {
+        try {
+          const { PART, SERN } = existingMap[part.partname];
+          await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
+          console.log('dismantled OK:', part.partname);
+        } catch(e) {
+          console.error('dismantle error:', part.partname, e.message);
+        }
       }
-    }
-    res.json({ success: true, results });
+      console.log('all dismantling done');
+    })();
   } catch (err) { console.error('dismantle error:', err.message); res.status(500).json({ error: 'שגיאה בסימון פירוק', details: err.message }); }
 });
 
@@ -257,7 +260,7 @@ app.patch('/api/parts/undo', requireAuth, async (req, res) => {
 
 app.get('/api/orders', requireAuth, async (req, res) => {
   try {
-    const data = await priorityGet(`ORDISINGLE?$filter=ORDSTATUSDES eq 'לפירוק'&$select=ORDNAME,CDES,CURDATE,ORDSTATUSDES,ORDISTATUSDES,PARTNAME,PDES,TQUANT,QAMF_LICENSEPLATE,SPEC2,SPEC4,SPEC18&$top=100`);
+    const data = await priorityGet(`ORDISINGLE?$filter=ORDSTATUSDES eq 'לפירוק'&$select=ORDNAME,CDES,CURDATE,ORDSTATUSDES,ORDISTATUSDES,PARTNAME,PDES,TQUANT,QAMF_LICENSEPLATE,SPEC2,SPEC4,SPEC18,QAME_AGENTNAME&$top=100`);
     res.json(data.value || []);
   } catch (err) { console.error('ORDERS ERROR:', err.message); res.status(500).json({ error: 'שגיאה בשליפת הזמנות', details: err.message }); }
 });
