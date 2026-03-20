@@ -8,6 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 app.use(express.json());
+app.use((req, res, next) => { res.setTimeout(120000); next(); });
 app.use(cors());
 
 const PRIORITY_BASE = process.env.PRIORITY_BASE_URL;
@@ -211,18 +212,23 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     const existingMap = {};
     (existing.value || []).forEach(r => { existingMap[r.PARTNAME] = r; });
 
-    // עדכן בסדרה — פריורטי לא תומך במקביל
+    // עדכן בסדרה — נסה PATCH, אם נכשל נסה POST
     for (const part of parts) {
       try {
         let result;
         if (existingMap[part.partname]) {
           const { PART, SERN } = existingMap[part.partname];
-          result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
+          try {
+            result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
+          } catch(patchErr) {
+            console.log('PATCH failed, trying POST for:', part.partname);
+            result = await priorityPost('QAMF_SERNMECLOLF', { SERNUM: regnum, PARTNAME: part.partname, UNLOADED: 'Y' });
+          }
         } else {
           result = await priorityPost('QAMF_SERNMECLOLF', { SERNUM: regnum, PARTNAME: part.partname, UNLOADED: 'Y' });
         }
         results.push(result);
-        console.log('dismantled:', part.partname);
+        console.log('dismantled OK:', part.partname);
       } catch(e) {
         console.error('dismantle part error:', part.partname, e.message);
         results.push({ error: e.message, partname: part.partname });
