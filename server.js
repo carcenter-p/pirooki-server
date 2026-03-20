@@ -205,17 +205,24 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
   try {
     const { regnum, parts } = req.body;
     const results = [];
-    // שלח רק את החלקים הנבחרים — ללא GET מיותר
-    console.log('dismantling:', parts.length, 'parts');
+    // שלוף את כל השורות הקיימות לרכב בקריאה אחת
+    const existing = await priorityGet(
+      `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}'&$select=PART,SERN,PARTNAME`
+    );
+    const existingMap = {};
+    (existing.value || []).forEach(r => { existingMap[r.PARTNAME] = r; });
+
+    // עדכן רק חלקים שקיימים בטבלה — בקבוצות של 10 במקביל
+    const toDismantle = parts.filter(p => existingMap[p.partname]);
+    console.log('dismantling:', toDismantle.length, 'of', parts.length, 'parts');
+
     const chunkSize = 10;
-    for (let i = 0; i < parts.length; i += chunkSize) {
-      const chunk = parts.slice(i, i + chunkSize);
+    for (let i = 0; i < toDismantle.length; i += chunkSize) {
+      const chunk = toDismantle.slice(i, i + chunkSize);
       const chunkResults = await Promise.all(chunk.map(async part => {
         try {
-          const result = await priorityPatch(
-            `QAMF_SERNMECLOLF(PART=${part.part},SERN=${part.sern})`,
-            { UNLOADED: 'Y' }
-          );
+          const { PART, SERN } = existingMap[part.partname];
+          const result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
           console.log('dismantled OK:', part.partname);
           return result;
         } catch(e) {
