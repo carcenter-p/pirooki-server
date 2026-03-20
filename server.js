@@ -220,20 +220,17 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     const toDismantle = parts.filter(p => existingMap[p.partname]);
     console.log('dismantling:', toDismantle.length, 'of', parts.length, 'parts');
 
-    // שלח לפריורטי ואל תחכה לתשובה — fire and forget עם delay קטן בין קריאות
+    // שלח לפריורטי בסדרה עם await
     for (const part of toDismantle) {
-      const { PART, SERN } = existingMap[part.partname];
-      // שלח ללא await — לא מחכים לתשובה
-      fetchWithTimeout(`${PRIORITY_BASE}/QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, {
-        method: 'PATCH',
-        headers: { 'Authorization': priorityAuth, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ UNLOADED: 'Y' })
-      }, 120000)
-      .then(() => console.log('dismantled OK:', part.partname))
-      .catch(e => console.error('dismantle error:', part.partname, e.message));
-      results.push({ partname: part.partname, sent: true });
-      // delay קטן בין קריאות
-      await new Promise(r => setTimeout(r, 200));
+      try {
+        const { PART, SERN } = existingMap[part.partname];
+        await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
+        console.log('dismantled OK:', part.partname);
+        results.push({ partname: part.partname, ok: true });
+      } catch(e) {
+        console.error('dismantle error:', part.partname, e.message);
+        results.push({ error: e.message, partname: part.partname });
+      }
     }
     res.json({ success: true, results });
   } catch (err) { console.error('dismantle error:', err.message); res.status(500).json({ error: 'שגיאה בסימון פירוק', details: err.message }); }
