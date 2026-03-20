@@ -68,7 +68,7 @@ async function priorityPost(path, body) {
     method: 'POST',
     headers: { 'Authorization': priorityAuth, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  }, 15000);
+  }, 60000);
   if (!res.ok) throw new Error(`Priority error: ${res.status}`);
   return res.json();
 }
@@ -78,7 +78,7 @@ async function priorityPatch(path, body) {
     method: 'PATCH',
     headers: { 'Authorization': priorityAuth, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  }, 15000);
+  }, 60000);
   if (!res.ok) throw new Error(`Priority error: ${res.status}`);
   return res.json();
 }
