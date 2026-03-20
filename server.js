@@ -176,7 +176,9 @@ app.get('/api/vehicle/:regnum', requireAuth, async (req, res) => {
     const data = await priorityGet(`SERNUMBERS?$filter=QAMF_LICENSEPLATE eq '${req.params.regnum}'&$select=SERNUM,SERN,PARTNAME,PARTDES,QAMF_LICENSEPLATE,QAMF_TOZAR,QAME_GIMUR,QAME_TIMEGETROAD,QAMF_OOZMETER,ODATE`);
     if (!data.value || data.value.length === 0) return res.status(404).json({ error: 'רכב לא נמצא' });
     // מצא את רשומת הרכב הראשית — זו שה-SERNUM שלה שווה למספר הרישוי בדיוק
-    const mainRecord = data.value.find(v => v.SERNUM === req.params.regnum) || data.value[data.value.length - 1];
+    const regnum = req.params.regnum;
+    const mainRecord = data.value.find(v => v.SERNUM === regnum) || data.value[data.value.length - 1];
+    console.log('vehicle SERNUM search:', regnum, '-> found SERNUM:', mainRecord.SERNUM, 'PARTDES:', mainRecord.PARTDES);
     res.json(mainRecord);
   } catch (err) { console.error('VEHICLE ERROR:', err.message); res.status(500).json({ error: 'שגיאה בשליפת נתוני רכב', details: err.message }); }
 });
