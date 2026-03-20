@@ -286,7 +286,7 @@ app.patch('/api/orders/:ordname/status', requireAuth, async (req, res) => {
 
 app.post('/api/transfer/bring', requireAuth, async (req, res) => {
   try {
-    const { ordname, sernum, warhsname, locname, towarhsname, tolocname } = req.body;
+    const { ordname, sernum, warhsname, locname, towarhsname, tolocname, stcode } = req.body;
     const body = {
       TYPE: 'T',
       WARHSNAME: warhsname,
