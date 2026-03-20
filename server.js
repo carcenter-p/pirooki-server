@@ -233,7 +233,7 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
       .catch(e => console.error('dismantle error:', part.partname, e.message));
       results.push({ partname: part.partname, sent: true });
       // delay קטן בין קריאות
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 200));
     }
     res.json({ success: true, results });
   } catch (err) { console.error('dismantle error:', err.message); res.status(500).json({ error: 'שגיאה בסימון פירוק', details: err.message }); }
