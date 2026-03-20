@@ -212,25 +212,20 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     const existingMap = {};
     (existing.value || []).forEach(r => { existingMap[r.PARTNAME] = r; });
 
-    // עדכן רק חלקים שקיימים בטבלה — בקבוצות של 10 במקביל
+    // עדכן אחד אחד בסדרה
     const toDismantle = parts.filter(p => existingMap[p.partname]);
     console.log('dismantling:', toDismantle.length, 'of', parts.length, 'parts');
 
-    const chunkSize = 10;
-    for (let i = 0; i < toDismantle.length; i += chunkSize) {
-      const chunk = toDismantle.slice(i, i + chunkSize);
-      const chunkResults = await Promise.all(chunk.map(async part => {
-        try {
-          const { PART, SERN } = existingMap[part.partname];
-          const result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
-          console.log('dismantled OK:', part.partname);
-          return result;
-        } catch(e) {
-          console.error('dismantle error:', part.partname, e.message);
-          return { error: e.message, partname: part.partname };
-        }
-      }));
-      results.push(...chunkResults);
+    for (const part of toDismantle) {
+      try {
+        const { PART, SERN } = existingMap[part.partname];
+        const result = await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
+        console.log('dismantled OK:', part.partname);
+        results.push(result);
+      } catch(e) {
+        console.error('dismantle error:', part.partname, e.message);
+        results.push({ error: e.message, partname: part.partname });
+      }
     }
     res.json({ success: true, results });
   } catch (err) { console.error('dismantle error:', err.message); res.status(500).json({ error: 'שגיאה בסימון פירוק', details: err.message }); }
