@@ -291,14 +291,13 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
     const body = {
       TYPE: 'T',
       CURDATE: today,
-      WARHSNAME: warhsname,
-      LOCNAME: locname,
-      TOWARHSNAME: towarhsname,
-      TOLOCNAME: tolocname,
-      STATDES: 'טיוטא',
-      OWNERLOGIN: req.user.username
+      WARHSNAME: '100',
+      LOCNAME: '0',
+      TOWARHSNAME: '100',
+      TOLOCNAME: '0',
+      STCODE: '1',
+      STATDES: 'ממנהל פירוק'
     };
-    if (stcode) body.STCODE = stcode;
     console.log('transfer POST body:', JSON.stringify(body));
     const result = await priorityPost('DOCUMENTS_T', body);
     console.log('transfer created:', result);
