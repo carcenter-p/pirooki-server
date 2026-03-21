@@ -284,6 +284,58 @@ app.patch('/api/orders/:ordname/status', requireAuth, async (req, res) => {
 // TRANSFER — העברות בין מחסנים
 // ════════════════════════════════════════════════════
 
+app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
+  try {
+    const { ordname } = req.body;
+    
+    // שלב 1 — שלוף SERNUM ו-LICENSEPLATE מה-ORDISINGLE
+    const ordData = await priorityGet(
+      `ORDISINGLE?$filter=ORDNAME eq '${ordname}'&$select=QAMF_SERNUM,QAMF_LICENSEPLATE&$top=1`
+    );
+    if (!ordData.value || ordData.value.length === 0)
+      return res.status(404).json({ error: 'הזמנה לא נמצאה' });
+    
+    const sernum = ordData.value[0].QAMF_SERNUM;
+    const licenseplate = ordData.value[0].QAMF_LICENSEPLATE;
+    
+    if (!sernum || !licenseplate)
+      return res.status(400).json({ error: 'לא נמצא מספר רכב בהזמנה' });
+
+    // שלב 2 — שלוף מיקום הרכב מ-PARTBAL
+    const balData = await priorityGet(
+      `PARTBAL?$filter=PARTNAME eq '${licenseplate}'&$select=LOCNAME,WARHSNAME&$top=1`
+    );
+    const locname = balData.value && balData.value.length > 0 ? balData.value[0].LOCNAME : '0';
+
+    // שלב 3 — צור תעודת העברה
+    const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
+    const doc = await priorityPost('DOCUMENTS_T', {
+      TYPE: 'T',
+      CURDATE: today,
+      WARHSNAME: '100',
+      LOCNAME: locname,
+      TOWARHSNAME: '100',
+      TOLOCNAME: '0',
+      STCODE: '1',
+      STATDES: 'ממנהל פירוק',
+      TRANSORDER_T_SUBFORM: [{
+        PARTNAME: licenseplate,
+        TQUANT: 1,
+        WARHSNAME: '100',
+        LOCNAME: locname,
+        TOWARHSNAME: '100',
+        TOLOCNAME: '0',
+        QAMF_SERNUM: sernum
+      }]
+    });
+    console.log('bring car transfer created:', doc.DOCNO, 'for order:', ordname);
+    res.json({ success: true, docno: doc.DOCNO });
+  } catch(err) {
+    console.error('bring car error:', err.message);
+    res.status(500).json({ error: 'שגיאה בפקודת הבא רכב', details: err.message });
+  }
+});
+
 app.post('/api/transfer/bring', requireAuth, async (req, res) => {
   try {
     const { partname, sernum, locname } = req.body;
