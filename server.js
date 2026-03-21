@@ -321,6 +321,7 @@ app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
       TOLOCNAME: '0',
       STCODE: '1',
       STATDES: 'ממנהל פירוק',
+      DETAILS: licenseplate,
       TRANSORDER_T_SUBFORM: [{
         PARTNAME: licenseplate,
         TQUANT: 1
