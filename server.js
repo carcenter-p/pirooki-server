@@ -303,7 +303,7 @@ app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
 
     // שלב 2 — שלוף מיקום הרכב מ-PARTBAL לפי מספר רישוי
     const balData = await priorityGet(
-      `PARTBAL?$filter=PARTNAME eq '${licenseplate}'&$select=LOCNAME,WARHSNAME&$top=1`
+      `PARTBAL?$filter=PARTNAME eq '${licenseplate}' and TBALANCE gt 0&$select=LOCNAME,WARHSNAME&$top=1`
     );
     const locname = balData.value && balData.value.length > 0 ? (balData.value[0].LOCNAME || '0') : '0';
     console.log('vehicle locname from PARTBAL:', locname, 'for licenseplate:', licenseplate);
@@ -341,7 +341,7 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
 
     // שלוף מיקום הרכב מ-PARTBAL
     const balData2 = await priorityGet(
-      `PARTBAL?$filter=PARTNAME eq '${partname}'&$select=LOCNAME&$top=1`
+      `PARTBAL?$filter=PARTNAME eq '${partname}' and TBALANCE gt 0&$select=LOCNAME&$top=1`
     );
     const actualLocname = balData2.value && balData2.value.length > 0 ? (balData2.value[0].LOCNAME || '0') : (locname || '0');
     console.log('actual locname:', actualLocname);
