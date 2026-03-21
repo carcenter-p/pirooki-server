@@ -286,7 +286,7 @@ app.patch('/api/orders/:ordname/status', requireAuth, async (req, res) => {
 
 app.post('/api/transfer/bring', requireAuth, async (req, res) => {
   try {
-    const { partname, licenseplate, locname } = req.body;
+    const { partname, sernum, locname } = req.body;
     const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
 
     // צור תעודת העברה כולל שורת רכב בפעולה אחת
