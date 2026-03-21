@@ -309,6 +309,7 @@ app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
 
     // שלב 3 — צור תעודת העברה
     const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
+    console.log('bring car POST - sernum:', sernum, 'licenseplate:', licenseplate, 'locname:', locname);
     const doc = await priorityPost('DOCUMENTS_T', {
       TYPE: 'T',
       CURDATE: today,
@@ -328,7 +329,7 @@ app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
         QAMF_SERNUM: sernum
       }]
     });
-    console.log('bring car transfer created:', doc.DOCNO, 'for order:', ordname);
+    console.log('bring car transfer created:', doc.DOCNO, 'for order:', ordname, 'sernum:', sernum, 'locname:', locname);
     res.json({ success: true, docno: doc.DOCNO });
   } catch(err) {
     console.error('bring car error:', err.message);
