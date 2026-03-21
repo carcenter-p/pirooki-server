@@ -286,22 +286,35 @@ app.patch('/api/orders/:ordname/status', requireAuth, async (req, res) => {
 
 app.post('/api/transfer/bring', requireAuth, async (req, res) => {
   try {
-    const { ordname, sernum, warhsname, locname, towarhsname, tolocname, stcode } = req.body;
+    const { partname, licenseplate, locname } = req.body;
     const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
-    const body = {
+
+    // שלב 1 — צור תעודת העברה
+    const doc = await priorityPost('DOCUMENTS_T', {
       TYPE: 'T',
       CURDATE: today,
       WARHSNAME: '100',
-      LOCNAME: '0',
+      LOCNAME: locname || '0',
       TOWARHSNAME: '100',
       TOLOCNAME: '0',
       STCODE: '1',
       STATDES: 'ממנהל פירוק'
-    };
-    console.log('transfer POST body:', JSON.stringify(body));
-    const result = await priorityPost('DOCUMENTS_T', body);
-    console.log('transfer created:', result);
-    res.json({ success: true, result });
+    });
+    console.log('transfer doc created:', doc.DOCNO);
+
+    // שלב 2 — הוסף שורת רכב לתעודה
+    const row = await priorityPost(`DOCUMENTS_T('${doc.DOCNO}')/TRANSORDER_T_SUBFORM`, {
+      PARTNAME: partname,
+      TQUANT: 1,
+      WARHSNAME: '100',
+      LOCNAME: locname || '0',
+      TOWARHSNAME: '100',
+      TOLOCNAME: '0',
+      QAMF_LICENSEPLATE: licenseplate
+    });
+    console.log('transfer row added:', row);
+
+    res.json({ success: true, docno: doc.DOCNO });
   } catch(err) {
     console.error('transfer error:', err.message);
     res.status(500).json({ error: 'שגיאה ביצירת העברה', details: err.message });
