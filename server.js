@@ -303,7 +303,7 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
     console.log('transfer doc created:', doc.DOCNO);
 
     // שלב 2 — הוסף שורת רכב לתעודה
-    const row = await priorityPost(`DOCUMENTS_T('${doc.DOCNO}')/TRANSORDER_T_SUBFORM`, {
+    const row = await priorityPost(`DOCUMENTS_T(${doc.DOC})/TRANSORDER_T_SUBFORM`, {
       PARTNAME: partname,
       TQUANT: 1,
       WARHSNAME: '100',
