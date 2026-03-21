@@ -335,6 +335,50 @@ app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
   }
 });
 
+app.post('/api/transfer/return', requireAuth, async (req, res) => {
+  try {
+    const { ordname, stcode } = req.body;
+
+    // שלוף LICENSEPLATE מה-ORDISINGLE
+    const ordData = await priorityGet(
+      `ORDISINGLE?$filter=ORDNAME eq '${ordname}'&$select=QAMF_LICENSEPLATE&$top=1`
+    );
+    if (!ordData.value || ordData.value.length === 0)
+      return res.status(404).json({ error: 'הזמנה לא נמצאה' });
+
+    const licenseplate = ordData.value[0].QAMF_LICENSEPLATE;
+    if (!licenseplate)
+      return res.status(400).json({ error: 'לא נמצא מספר רכב בהזמנה' });
+
+    // שלוף מיקום הרכב מ-PARTBAL
+    const balData = await priorityGet(
+      `PARTBAL?$filter=PARTNAME eq '${licenseplate}' and TBALANCE gt 0&$select=LOCNAME&$top=1`
+    );
+    const locname = balData.value && balData.value.length > 0 ? (balData.value[0].LOCNAME || '0') : '0';
+
+    const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
+    const doc = await priorityPost('DOCUMENTS_T', {
+      TYPE: 'T',
+      CURDATE: today,
+      WARHSNAME: '100',
+      LOCNAME: locname,
+      TOWARHSNAME: '100',
+      TOLOCNAME: '0',
+      STCODE: stcode,
+      DETAILS: licenseplate,
+      TRANSORDER_T_SUBFORM: [{
+        PARTNAME: licenseplate,
+        TQUANT: 1
+      }]
+    });
+    console.log('return car transfer created:', doc.DOCNO, 'stcode:', stcode);
+    res.json({ success: true, docno: doc.DOCNO });
+  } catch(err) {
+    console.error('return car error:', err.message);
+    res.status(500).json({ error: 'שגיאה בפקודת העברה', details: err.message });
+  }
+});
+
 app.post('/api/transfer/bring', requireAuth, async (req, res) => {
   try {
     const { partname, sernum, locname } = req.body;
