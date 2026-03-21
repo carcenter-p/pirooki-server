@@ -313,8 +313,11 @@ app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
     // שלב 1 — צור תעודה בסיסית
     const doc = await priorityPost('DOCUMENTS_T', {
       TYPE: 'T',
+      CURDATE: today,
       WARHSNAME: '100',
+      LOCNAME: locname || '0',
       TOWARHSNAME: '100',
+      TOLOCNAME: '0',
       STCODE: '1',
       STATDES: 'ממנהל פירוק'
     });
@@ -352,11 +355,7 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
       STATDES: 'ממנהל פירוק',
       TRANSORDER_T_SUBFORM: [{
         PARTNAME: partname,
-        TQUANT: 1,
-        WARHSNAME: '100',
-        LOCNAME: locname || '0',
-        TOWARHSNAME: '100',
-        TOLOCNAME: '0'
+        TQUANT: 1
       }]
     });
     console.log('transfer doc created:', doc.DOCNO);
