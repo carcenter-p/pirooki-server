@@ -289,7 +289,7 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
     const { partname, licenseplate, locname } = req.body;
     const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
 
-    // שלב 1 — צור תעודת העברה
+    // צור תעודת העברה כולל שורת רכב בפעולה אחת
     const doc = await priorityPost('DOCUMENTS_T', {
       TYPE: 'T',
       CURDATE: today,
@@ -298,12 +298,7 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
       TOWARHSNAME: '100',
       TOLOCNAME: '0',
       STCODE: '1',
-      STATDES: 'ממנהל פירוק'
-    });
-    console.log('transfer doc created:', doc.DOCNO);
-
-    // שלב 2 — PATCH על התעודה עם שורת בן
-    const row = await priorityPatch(`DOCUMENTS_T(${doc.DOC})`, {
+      STATDES: 'ממנהל פירוק',
       TRANSORDER_T_SUBFORM: [{
         PARTNAME: partname,
         TQUANT: 1,
@@ -313,7 +308,7 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
         TOLOCNAME: '0'
       }]
     });
-    console.log('transfer row added:', row);
+    console.log('transfer doc created:', doc.DOCNO);
 
     res.json({ success: true, docno: doc.DOCNO });
   } catch(err) {
