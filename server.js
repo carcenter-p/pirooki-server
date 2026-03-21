@@ -312,11 +312,8 @@ app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
     console.log('bring car POST - sernum:', sernum, 'licenseplate:', licenseplate, 'locname:', locname);
     const doc = await priorityPost('DOCUMENTS_T', {
       TYPE: 'T',
-      CURDATE: today,
       WARHSNAME: '100',
-      LOCNAME: locname,
       TOWARHSNAME: '100',
-      TOLOCNAME: '0',
       STCODE: '1',
       STATDES: 'ממנהל פירוק',
       TRANSORDER_T_SUBFORM: [{
