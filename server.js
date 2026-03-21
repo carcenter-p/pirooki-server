@@ -321,12 +321,7 @@ app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
       STATDES: 'ממנהל פירוק',
       TRANSORDER_T_SUBFORM: [{
         PARTNAME: licenseplate,
-        TQUANT: 1,
-        WARHSNAME: '100',
-        LOCNAME: locname,
-        TOWARHSNAME: '100',
-        TOLOCNAME: '0',
-        QAMF_SERNUM: sernum
+        TQUANT: 1
       }]
     });
     console.log('bring car transfer created:', doc.DOCNO, 'for order:', ordname, 'sernum:', sernum, 'locname:', locname);
