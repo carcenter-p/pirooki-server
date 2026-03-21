@@ -310,18 +310,24 @@ app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
     // שלב 3 — צור תעודת העברה
     const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
     console.log('bring car POST - sernum:', sernum, 'licenseplate:', licenseplate, 'locname:', locname);
+    // שלב 1 — צור תעודה בסיסית
     const doc = await priorityPost('DOCUMENTS_T', {
       TYPE: 'T',
       WARHSNAME: '100',
       TOWARHSNAME: '100',
       STCODE: '1',
-      STATDES: 'ממנהל פירוק',
+      STATDES: 'ממנהל פירוק'
+    });
+    console.log('bring car transfer created:', doc.DOCNO, 'DOC:', doc.DOC);
+
+    // שלב 2 — הוסף שורת רכב ב-PATCH
+    await priorityPatch(`DOCUMENTS_T('${doc.DOCNO}')`, {
       TRANSORDER_T_SUBFORM: [{
         PARTNAME: licenseplate,
         TQUANT: 1
       }]
     });
-    console.log('bring car transfer created:', doc.DOCNO, 'for order:', ordname, 'sernum:', sernum, 'locname:', locname);
+    console.log('bring car row added for:', licenseplate);
     res.json({ success: true, docno: doc.DOCNO });
   } catch(err) {
     console.error('bring car error:', err.message);
