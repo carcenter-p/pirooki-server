@@ -335,6 +335,42 @@ app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
   }
 });
 
+app.post('/api/transfer/by-plate', requireAuth, async (req, res) => {
+  try {
+    const { licenseplate, stcode } = req.body;
+    const toLocMap = { '4': 'SHITA', '5': 'BARZEL' };
+    const tolocname = toLocMap[stcode] || '0';
+
+    // שלוף מיקום הרכב מ-PARTBAL
+    const balData = await priorityGet(
+      `PARTBAL?$filter=PARTNAME eq '${licenseplate}' and TBALANCE gt 0&$select=LOCNAME&$top=1`
+    );
+    const locname = balData.value && balData.value.length > 0 ? (balData.value[0].LOCNAME || '0') : '0';
+
+    const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
+    const doc = await priorityPost('DOCUMENTS_T', {
+      TYPE: 'T',
+      CURDATE: today,
+      WARHSNAME: '100',
+      LOCNAME: locname,
+      TOWARHSNAME: '100',
+      TOLOCNAME: tolocname,
+      STCODE: stcode,
+      STATDES: 'ממנהל פירוק',
+      DETAILS: licenseplate,
+      TRANSORDER_T_SUBFORM: [{
+        PARTNAME: licenseplate,
+        TQUANT: 1
+      }]
+    });
+    console.log('by-plate transfer created:', doc.DOCNO, 'stcode:', stcode);
+    res.json({ success: true, docno: doc.DOCNO });
+  } catch(err) {
+    console.error('by-plate transfer error:', err.message);
+    res.status(500).json({ error: 'שגיאה בפקודת העברה', details: err.message });
+  }
+});
+
 app.post('/api/transfer/return', requireAuth, async (req, res) => {
   try {
     const { ordname, stcode, tolocname: tolocnameParam } = req.body;
