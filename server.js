@@ -223,7 +223,7 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     // החזר תשובה מיד לאפליקציה
     res.json({ success: true, count: toDismantle.length });
 
-    // שלח לפריורטי ברקע — בלי לחסום את ה-response
+    // שלח לפריורטי ברקע — עם delay בין חלקים
     (async () => {
       for (const part of toDismantle) {
         try {
@@ -233,6 +233,8 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
         } catch(e) {
           console.error('dismantle error:', part.partname, e.message);
         }
+        // delay בין חלקים
+        await new Promise(r => setTimeout(r, 3000));
       }
       console.log('all dismantling done');
     })();
