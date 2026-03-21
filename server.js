@@ -301,11 +301,12 @@ app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
     if (!sernum || !licenseplate)
       return res.status(400).json({ error: 'לא נמצא מספר רכב בהזמנה' });
 
-    // שלב 2 — שלוף מיקום הרכב מ-PARTBAL
+    // שלב 2 — שלוף מיקום הרכב מ-PARTBAL לפי מספר רישוי
     const balData = await priorityGet(
       `PARTBAL?$filter=PARTNAME eq '${licenseplate}'&$select=LOCNAME,WARHSNAME&$top=1`
     );
-    const locname = balData.value && balData.value.length > 0 ? balData.value[0].LOCNAME : '0';
+    const locname = balData.value && balData.value.length > 0 ? (balData.value[0].LOCNAME || '0') : '0';
+    console.log('vehicle locname from PARTBAL:', locname, 'for licenseplate:', licenseplate);
 
     // שלב 3 — צור תעודת העברה
     const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
@@ -326,7 +327,7 @@ app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
     // שלב 2 — הוסף שורת רכב ב-PATCH
     await priorityPatch(`DOCUMENTS_T('${doc.DOCNO}')`, {
       TRANSORDER_T_SUBFORM: [{
-        PARTNAME: licenseplate,
+        PARTNAME: sernum,
         TQUANT: 1
       }]
     });
@@ -343,12 +344,19 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
     const { partname, sernum, locname } = req.body;
     const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
 
+    // שלוף מיקום הרכב מ-PARTBAL
+    const balData2 = await priorityGet(
+      `PARTBAL?$filter=PARTNAME eq '${partname}'&$select=LOCNAME&$top=1`
+    );
+    const actualLocname = balData2.value && balData2.value.length > 0 ? (balData2.value[0].LOCNAME || '0') : (locname || '0');
+    console.log('actual locname:', actualLocname);
+
     // צור תעודת העברה כולל שורת רכב בפעולה אחת
     const doc = await priorityPost('DOCUMENTS_T', {
       TYPE: 'T',
       CURDATE: today,
       WARHSNAME: '100',
-      LOCNAME: locname || '0',
+      LOCNAME: actualLocname,
       TOWARHSNAME: '100',
       TOLOCNAME: '0',
       STCODE: '1',
@@ -362,7 +370,7 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
 
     res.json({ success: true, docno: doc.DOCNO });
   } catch(err) {
-    console.error('transfer error:', err.message);
+    console.error('transfer error:', err.message, 'partname:', partname, 'locname:', locname);
     res.status(500).json({ error: 'שגיאה ביצירת העברה', details: err.message });
   }
 });
