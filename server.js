@@ -302,8 +302,8 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
     });
     console.log('transfer doc created:', doc.DOCNO);
 
-    // שלב 2 — עדכן את התעודה עם שורת רכב דרך PATCH
-    const updated = await priorityPatch(`DOCUMENTS_T?$filter=DOCNO eq '${doc.DOCNO}'`, {
+    // שלב 2 — PATCH על התעודה עם שורת בן
+    const row = await priorityPatch(`DOCUMENTS_T(${doc.DOC})`, {
       TRANSORDER_T_SUBFORM: [{
         PARTNAME: partname,
         TQUANT: 1,
@@ -313,7 +313,7 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
         TOLOCNAME: '0'
       }]
     });
-    console.log('transfer row added');
+    console.log('transfer row added:', row);
 
     res.json({ success: true, docno: doc.DOCNO });
   } catch(err) {
