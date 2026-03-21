@@ -337,7 +337,7 @@ app.post('/api/transfer/bring-by-order', requireAuth, async (req, res) => {
 
 app.post('/api/transfer/return', requireAuth, async (req, res) => {
   try {
-    const { ordname, stcode } = req.body;
+    const { ordname, stcode, tolocname: tolocnameParam } = req.body;
 
     // שלוף LICENSEPLATE מה-ORDISINGLE
     const ordData = await priorityGet(
@@ -356,6 +356,10 @@ app.post('/api/transfer/return', requireAuth, async (req, res) => {
     );
     const locname = balData.value && balData.value.length > 0 ? (balData.value[0].LOCNAME || '0') : '0';
 
+    // איתור מקבל לפי סוג ההעברה
+    const toLocMap = { '4': 'SHITA', '5': 'BARZEL' };
+    const tolocname = toLocMap[stcode] || tolocnameParam || '0';
+
     const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
     const doc = await priorityPost('DOCUMENTS_T', {
       TYPE: 'T',
@@ -363,15 +367,16 @@ app.post('/api/transfer/return', requireAuth, async (req, res) => {
       WARHSNAME: '100',
       LOCNAME: locname,
       TOWARHSNAME: '100',
-      TOLOCNAME: '0',
+      TOLOCNAME: tolocname,
       STCODE: stcode,
+      STATDES: 'ממנהל פירוק',
       DETAILS: licenseplate,
       TRANSORDER_T_SUBFORM: [{
         PARTNAME: licenseplate,
         TQUANT: 1
       }]
     });
-    console.log('return car transfer created:', doc.DOCNO, 'stcode:', stcode);
+    console.log('return car transfer created:', doc.DOCNO, 'stcode:', stcode, 'from:', locname, 'to:', tolocname);
     res.json({ success: true, docno: doc.DOCNO });
   } catch(err) {
     console.error('return car error:', err.message);
