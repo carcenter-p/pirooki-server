@@ -287,12 +287,16 @@ app.patch('/api/orders/:ordname/status', requireAuth, async (req, res) => {
 app.post('/api/transfer/bring', requireAuth, async (req, res) => {
   try {
     const { ordname, sernum, warhsname, locname, towarhsname, tolocname, stcode } = req.body;
+    const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
     const body = {
       TYPE: 'T',
+      CURDATE: today,
       WARHSNAME: warhsname,
       LOCNAME: locname,
       TOWARHSNAME: towarhsname,
-      TOLOCNAME: tolocname
+      TOLOCNAME: tolocname,
+      STATDES: 'טיוטא',
+      OWNERLOGIN: req.user.username
     };
     if (stcode) body.STCODE = stcode;
     console.log('transfer POST body:', JSON.stringify(body));
