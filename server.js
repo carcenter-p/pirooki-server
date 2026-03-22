@@ -234,7 +234,7 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
           console.error('dismantle error:', part.partname, e.message);
         }
         // delay בין חלקים
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 1000));
       }
       console.log('all dismantling done');
     })();
@@ -456,6 +456,23 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
     console.error('transfer error:', err.message, 'partname:', partname, 'locname:', locname);
     res.status(500).json({ error: 'שגיאה ביצירת העברה', details: err.message });
   }
+});
+
+// ════════════════════════════════════════════════════
+// BARZEL TRANSFERS — שמירת העברות ברזל
+// ════════════════════════════════════════════════════
+
+app.get('/api/barzel', requireAuth, async (req, res) => {
+  const { data, error } = await supabase.from('barzel_transfers').select('key');
+  if (error) return res.status(500).json({ error: 'שגיאה' });
+  res.json(data.map(r => r.key));
+});
+
+app.post('/api/barzel', requireAuth, async (req, res) => {
+  const { key } = req.body;
+  const { error } = await supabase.from('barzel_transfers').upsert({ key });
+  if (error) return res.status(500).json({ error: 'שגיאה' });
+  res.json({ success: true });
 });
 
 // ════════════════════════════════════════════════════
