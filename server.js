@@ -215,6 +215,7 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     );
     const existingMap = {};
     (existing.value || []).forEach(r => { existingMap[r.PARTNAME] = r; });
+    console.log('existingMap keys:', Object.keys(existingMap).length, 'regnum:', regnum, 'parts requested:', parts.map(p=>p.partname));
 
     // עדכן אחד אחד בסדרה
     const toDismantle = parts.filter(p => existingMap[p.partname]);
