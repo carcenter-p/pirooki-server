@@ -211,7 +211,7 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     const results = [];
     // שלוף את כל השורות הקיימות לרכב בקריאה אחת
     const existing = await priorityGet(
-      `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}'&$select=PART,SERN,PARTNAME`
+      `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}'&$select=PART,SERN,PARTNAME&$top=500`
     );
     const existingMap = {};
     (existing.value || []).forEach(r => { existingMap[r.PARTNAME] = r; });
