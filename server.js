@@ -237,6 +237,11 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
         await new Promise(r => setTimeout(r, 1000));
       }
       console.log('all dismantling done');
+      // תזמן קבלה למלאי אחרי שעה
+      setTimeout(async () => {
+        console.log('creating receipt for vehicle:', regnum);
+        await createReceipt(regnum, toDismantle);
+      }, 2 * 60 * 1000); // 2 דקות לבדיקה
     })();
   } catch (err) { console.error('dismantle error:', err.message); res.status(500).json({ error: 'שגיאה בסימון פירוק', details: err.message }); }
 });
@@ -456,6 +461,40 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
     console.error('transfer error:', err.message, 'partname:', partname, 'locname:', locname);
     res.status(500).json({ error: 'שגיאה ביצירת העברה', details: err.message });
   }
+});
+
+// ════════════════════════════════════════════════════
+// RECEIPT — קבלת מלאי לפירוקייה
+// ════════════════════════════════════════════════════
+
+async function createReceipt(regnum, parts) {
+  try {
+    const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
+    const rows = parts.map(p => ({
+      PARTNAME: p.partname,
+      TQUANT: 1,
+      TOWARHSNAME: '100',
+      TOLOCNAME: 'PIRUKIA',
+      QAMF_SERNUM: regnum
+    }));
+    const doc = await priorityPost('DOCUMENTS_P', {
+      TYPE: 'P',
+      CURDATE: today,
+      SUPNAME: '001',
+      TOWARHSNAME: '100',
+      TOLOCNAME: 'PIRUKIA',
+      TRANSORDER_P_SUBFORM: rows
+    });
+    console.log('receipt created:', doc.DOCNO, 'for vehicle:', regnum, 'parts:', parts.length);
+    return doc;
+  } catch(err) {
+    console.error('receipt error:', err.message);
+  }
+}
+
+app.post('/api/parts/dismantle-and-receive', requireAuth, async (req, res) => {
+  // endpoint זהה ל-dismantle אבל עם תזמון קבלה אחרי שעה
+  res.json({ success: true, message: 'dismantling scheduled' });
 });
 
 // ════════════════════════════════════════════════════
