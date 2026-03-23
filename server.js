@@ -470,6 +470,18 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
 async function createReceipt(regnum, parts) {
   try {
     const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
+    
+    // שלב 1 — צור תעודת קבלה
+    const doc = await priorityPost('DOCUMENTS_P', {
+      TYPE: 'P',
+      CURDATE: today,
+      SUPNAME: '001',
+      TOWARHSNAME: '100',
+      TOLOCNAME: 'PIRUKIA'
+    });
+    console.log('receipt doc created:', doc.DOCNO, 'DOC:', doc.DOC);
+
+    // שלב 2 — הוסף שורות חלקים ב-PATCH
     const rows = parts.map(p => ({
       PARTNAME: p.partname,
       TQUANT: 1,
@@ -477,15 +489,10 @@ async function createReceipt(regnum, parts) {
       TOLOCNAME: 'PIRUKIA',
       QAMF_SERNUM: regnum
     }));
-    const doc = await priorityPost('DOCUMENTS_P', {
-      TYPE: 'P',
-      CURDATE: today,
-      SUPNAME: '001',
-      TOWARHSNAME: '100',
-      TOLOCNAME: 'PIRUKIA',
+    await priorityPatch(`DOCUMENTS_P('${doc.DOCNO}')`, {
       TRANSORDER_P_SUBFORM: rows
     });
-    console.log('receipt created:', doc.DOCNO, 'for vehicle:', regnum, 'parts:', parts.length);
+    console.log('receipt rows added:', parts.length, 'parts for vehicle:', regnum);
     return doc;
   } catch(err) {
     console.error('receipt error:', err.message);
