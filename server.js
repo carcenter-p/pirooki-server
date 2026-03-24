@@ -224,7 +224,7 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
       } catch(e) {
         console.error('receipt schedule error:', e.message);
       }
-    }, 2 * 60 * 1000);
+    }, 30 * 1000); // 30 שניות לבדיקה
 
     // שלח לפריורטי ברקע — GET לכל חלק בנפרד ואז PATCH
     (async () => {
@@ -513,6 +513,27 @@ async function createReceipt(regnum, parts) {
 app.post('/api/parts/dismantle-and-receive', requireAuth, async (req, res) => {
   // endpoint זהה ל-dismantle אבל עם תזמון קבלה אחרי שעה
   res.json({ success: true, message: 'dismantling scheduled' });
+});
+
+// ════════════════════════════════════════════════════
+// TEST — בדיקת POST ל-QAMF_SERNMECLOLF
+// ════════════════════════════════════════════════════
+
+app.post('/api/test-post-part', requireAuth, async (req, res) => {
+  try {
+    const { sern, part, sernum } = req.body;
+    const result = await priorityPost('QAMF_SERNMECLOLF', {
+      SERN: sern,
+      PART: part,
+      SERNUM: sernum,
+      UNLOADED: 'Y'
+    });
+    console.log('test post part result:', result);
+    res.json({ success: true, result });
+  } catch(err) {
+    console.error('test post part error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ════════════════════════════════════════════════════
