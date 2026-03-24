@@ -215,9 +215,15 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     res.json({ success: true, count: parts.length });
 
     // תזמן קבלה למלאי מיד — ללא תלות בהצלחת הפירוק
+    const partsToReceive = [...parts];
+    const regnumToReceive = regnum;
     setTimeout(async () => {
-      console.log('creating receipt for vehicle:', regnum);
-      await createReceipt(regnum, parts);
+      try {
+        console.log('creating receipt for vehicle:', regnumToReceive, 'parts:', partsToReceive.length);
+        await createReceipt(regnumToReceive, partsToReceive);
+      } catch(e) {
+        console.error('receipt schedule error:', e.message);
+      }
     }, 2 * 60 * 1000);
 
     // שלח לפריורטי ברקע — GET לכל חלק בנפרד ואז PATCH
