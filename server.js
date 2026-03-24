@@ -220,7 +220,7 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     setTimeout(async () => {
       console.log('creating receipt for vehicle:', _regnum, 'parts:', _parts.length);
       await createReceipt(_regnum, _parts);
-    }, 30 * 1000); // 30 שניות לבדיקה
+    }, 90 * 1000); // 90 שניות לבדיקה
 
     // שלח לפריורטי ברקע — GET לכל חלק בנפרד ואז PATCH
     (async () => {
