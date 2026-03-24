@@ -214,14 +214,6 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
     // החזר תשובה מיד לאפליקציה
     res.json({ success: true, count: parts.length });
 
-    // תזמן קבלה למלאי מיד — לפני הלולאה
-    const _parts = [...parts];
-    const _regnum = regnum;
-    setTimeout(async () => {
-      console.log('creating receipt for vehicle:', _regnum, 'parts:', _parts.length);
-      await createReceipt(_regnum, _parts);
-    }, 90 * 1000); // 90 שניות לבדיקה
-
     // שלח לפריורטי ברקע — GET לכל חלק בנפרד ואז PATCH
     (async () => {
       const dismantled = [];
@@ -245,6 +237,13 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
         await new Promise(r => setTimeout(r, 1000));
       }
       console.log('all dismantling done');
+      // תזמן קבלה למלאי 90 שניות אחרי הפירוק
+      const _parts = [...parts];
+      const _regnum = regnum;
+      setTimeout(async () => {
+        console.log('creating receipt for vehicle:', _regnum, 'parts:', _parts.length);
+        await createReceipt(_regnum, _parts);
+      }, 90 * 1000); // 90 שניות
     })();
   } catch (err) { console.error('dismantle error:', err.message); res.status(500).json({ error: 'שגיאה בסימון פירוק', details: err.message }); }
 });
