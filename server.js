@@ -482,18 +482,22 @@ async function createReceipt(regnum, parts) {
     });
     console.log('receipt doc created:', doc.DOCNO, 'DOC:', doc.DOC);
 
-    // שלב 2 — הוסף שורות חלקים ב-PATCH
-    const rows = parts.map(p => ({
-      PARTNAME: p.partname,
-      TQUANT: 1,
-      TOWARHSNAME: '100',
-      TOLOCNAME: 'PIRUKIA',
-      QAMF_SERNUM: regnum
-    }));
-    await priorityPatch(`DOCUMENTS_P('${doc.DOCNO}')`, {
-      TRANSORDER_P_SUBFORM: rows
-    });
-    console.log('receipt rows added:', parts.length, 'parts for vehicle:', regnum);
+    // שלב 2 — הוסף שורות חלקים בנפרד לכל חלק
+    for (const part of parts) {
+      try {
+        await priorityPost(`DOCUMENTS_P('${doc.DOCNO}')/TRANSORDER_P_SUBFORM`, {
+          PARTNAME: part.partname,
+          TQUANT: 1,
+          TOWARHSNAME: '100',
+          TOLOCNAME: 'PIRUKIA',
+          QAMF_SERNUM: regnum
+        });
+        console.log('receipt row added:', part.partname);
+      } catch(e) {
+        console.error('receipt row error:', part.partname, e.message);
+      }
+    }
+    console.log('receipt rows done:', parts.length, 'parts for vehicle:', regnum);
     return doc;
   } catch(err) {
     console.error('receipt error:', err.message);
