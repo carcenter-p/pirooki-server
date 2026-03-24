@@ -478,7 +478,7 @@ async function createReceipt(regnum, parts) {
       TQUANT: 1,
       TOWARHSNAME: '100',
       TOLOCNAME: 'PIRUKIA',
-      QAMF_SERNUM: regnum
+      QAMF_SERNUM: p.partname
     }));
 
     // צור תעודה כולל שורות בפעולה אחת
