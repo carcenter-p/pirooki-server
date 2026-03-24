@@ -243,7 +243,7 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
       setTimeout(async () => {
         console.log('creating receipt for vehicle:', _regnum, 'parts:', _parts.length);
         await createReceipt(_regnum, _parts);
-      }, 30 * 1000); // 30 שניות לבדיקה
+      }, 60 * 60 * 1000); // שעה
     })();
   } catch (err) { console.error('dismantle error:', err.message); res.status(500).json({ error: 'שגיאה בסימון פירוק', details: err.message }); }
 });
@@ -489,7 +489,7 @@ async function createReceipt(regnum, parts) {
       TOLOCNAME: 'PIRUKIA',
       TRANSORDER_P_SUBFORM: rows
     });
-    console.log('receipt created:', doc.DOCNO, 'parts:', parts.length);
+    console.log('receipt created:', doc.DOCNO, 'parts:', parts.map(p=>p.partname));
     return doc;
   } catch(err) {
     console.error('receipt error:', err.message);
