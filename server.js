@@ -209,40 +209,41 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
   try {
     const { regnum, parts } = req.body;
     const results = [];
-    // שלוף את כל השורות הקיימות לרכב בקריאה אחת
-    const existing = await priorityGet(
-      `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}'&$select=PART,SERN,PARTNAME&$top=500`
-    );
-    const existingMap = {};
-    (existing.value || []).forEach(r => { existingMap[r.PARTNAME] = r; });
-    console.log('existingMap keys:', Object.keys(existingMap).length, 'regnum:', regnum, 'parts requested:', parts.map(p=>p.partname));
-
-    // עדכן אחד אחד בסדרה
-    const toDismantle = parts.filter(p => existingMap[p.partname]);
-    console.log('dismantling:', toDismantle.length, 'of', parts.length, 'parts');
+    console.log('dismantling:', parts.length, 'parts for vehicle:', regnum);
 
     // החזר תשובה מיד לאפליקציה
-    res.json({ success: true, count: toDismantle.length });
+    res.json({ success: true, count: parts.length });
 
-    // שלח לפריורטי ברקע — עם delay בין חלקים
+    // שלח לפריורטי ברקע — GET לכל חלק בנפרד ואז PATCH
     (async () => {
-      for (const part of toDismantle) {
+      const dismantled = [];
+      for (const part of parts) {
         try {
-          const { PART, SERN } = existingMap[part.partname];
+          // שלוף PART ו-SERN לכל חלק בנפרד
+          const existing = await priorityGet(
+            `QAMF_SERNMECLOLF?$filter=SERNUM eq '${regnum}' and PARTNAME eq '${part.partname}'&$select=PART,SERN`
+          );
+          if (!existing.value || existing.value.length === 0) {
+            console.error('part not found:', part.partname);
+            continue;
+          }
+          const { PART, SERN } = existing.value[0];
           await priorityPatch(`QAMF_SERNMECLOLF(PART=${PART},SERN=${SERN})`, { UNLOADED: 'Y' });
           console.log('dismantled OK:', part.partname);
+          dismantled.push(part);
         } catch(e) {
           console.error('dismantle error:', part.partname, e.message);
         }
-        // delay בין חלקים
         await new Promise(r => setTimeout(r, 1000));
       }
       console.log('all dismantling done');
-      // תזמן קבלה למלאי אחרי שעה
-      setTimeout(async () => {
-        console.log('creating receipt for vehicle:', regnum);
-        await createReceipt(regnum, toDismantle);
-      }, 2 * 60 * 1000); // 2 דקות לבדיקה
+      // תזמן קבלה למלאי אחרי 2 דקות לבדיקה
+      if (dismantled.length > 0) {
+        setTimeout(async () => {
+          console.log('creating receipt for vehicle:', regnum);
+          await createReceipt(regnum, dismantled);
+        }, 2 * 60 * 1000);
+      }
     })();
   } catch (err) { console.error('dismantle error:', err.message); res.status(500).json({ error: 'שגיאה בסימון פירוק', details: err.message }); }
 });
