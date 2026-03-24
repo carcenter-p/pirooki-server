@@ -237,6 +237,13 @@ app.post('/api/parts/dismantle', requireAuth, async (req, res) => {
         await new Promise(r => setTimeout(r, 1000));
       }
       console.log('all dismantling done');
+      // תזמן קבלה למלאי
+      const _parts = [...parts];
+      const _regnum = regnum;
+      setTimeout(async () => {
+        console.log('creating receipt for vehicle:', _regnum, 'parts:', _parts.length);
+        await createReceipt(_regnum, _parts);
+      }, 30 * 1000); // 30 שניות לבדיקה
     })();
   } catch (err) { console.error('dismantle error:', err.message); res.status(500).json({ error: 'שגיאה בסימון פירוק', details: err.message }); }
 });
@@ -465,33 +472,24 @@ app.post('/api/transfer/bring', requireAuth, async (req, res) => {
 async function createReceipt(regnum, parts) {
   try {
     const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
-    
-    // שלב 1 — צור תעודת קבלה
+    const rows = parts.map(p => ({
+      PARTNAME: p.partname,
+      TQUANT: 1,
+      TOWARHSNAME: '100',
+      TOLOCNAME: 'PIRUKIA',
+      QAMF_SERNUM: regnum
+    }));
+
+    // צור תעודה כולל שורות בפעולה אחת
     const doc = await priorityPost('DOCUMENTS_P', {
       TYPE: 'P',
       CURDATE: today,
       SUPNAME: '001',
       TOWARHSNAME: '100',
-      TOLOCNAME: 'PIRUKIA'
+      TOLOCNAME: 'PIRUKIA',
+      TRANSORDER_P_SUBFORM: rows
     });
-    console.log('receipt doc created:', doc.DOCNO, 'DOC:', doc.DOC);
-
-    // שלב 2 — הוסף שורות חלקים בנפרד לכל חלק
-    for (const part of parts) {
-      try {
-        await priorityPost(`DOCUMENTS_P('${doc.DOCNO}')/TRANSORDER_P_SUBFORM`, {
-          PARTNAME: part.partname,
-          TQUANT: 1,
-          TOWARHSNAME: '100',
-          TOLOCNAME: 'PIRUKIA',
-          QAMF_SERNUM: regnum
-        });
-        console.log('receipt row added:', part.partname);
-      } catch(e) {
-        console.error('receipt row error:', part.partname, e.message);
-      }
-    }
-    console.log('receipt rows done:', parts.length, 'parts for vehicle:', regnum);
+    console.log('receipt created:', doc.DOCNO, 'parts:', parts.length);
     return doc;
   } catch(err) {
     console.error('receipt error:', err.message);
