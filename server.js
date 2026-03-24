@@ -474,7 +474,7 @@ async function createReceipt(regnum, parts) {
   try {
     const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
     const rows = parts.map(p => ({
-      PARTNAME: p.partname,
+      PARTNAME: p.partname + regnum,
       TQUANT: 1,
       TOWARHSNAME: '100',
       TOLOCNAME: 'PIRUKIA'
