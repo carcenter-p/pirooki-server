@@ -526,18 +526,19 @@ app.post('/api/test-post-part', requireAuth, async (req, res) => {
 // ════════════════════════════════════════════════════
 
 app.get('/api/print-test', async (req, res) => {
+  let serverIp = 'unknown';
   try {
-    // בדוק IP של השרת
     const ipRes = await fetchWithTimeout('https://api.ipify.org?format=json', {}, 5000);
     const ipData = await ipRes.json();
-    // נסה להגיע לברטנדר
+    serverIp = ipData.ip;
+  } catch(e) {}
+  
+  try {
     const result = await fetchWithTimeout('http://80.179.245.89/api/Print', {}, 10000);
     const text = await result.text();
-    res.json({ success: true, serverIp: ipData.ip, status: result.status, body: text.substring(0, 200) });
+    return res.json({ success: true, serverIp, status: result.status, body: text.substring(0, 500) });
   } catch(err) {
-    const ipRes = await fetchWithTimeout('https://api.ipify.org?format=json', {}, 5000).catch(()=>null);
-    const ipData = ipRes ? await ipRes.json().catch(()=>null) : null;
-    res.status(500).json({ error: err.message, serverIp: ipData?.ip });
+    return res.json({ success: false, serverIp, error: err.message });
   }
 });
 
