@@ -525,7 +525,7 @@ app.post('/api/test-post-part', requireAuth, async (req, res) => {
 // TEST BARTENDER CONNECTION
 // ════════════════════════════════════════════════════
 
-app.get('/api/test-bartender', requireAuth, async (req, res) => {
+app.get('/api/test-bartender', async (req, res) => {
   try {
     // בדוק IP של השרת
     const ipRes = await fetchWithTimeout('https://api.ipify.org?format=json', {}, 5000);
