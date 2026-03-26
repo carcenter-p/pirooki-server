@@ -531,7 +531,7 @@ app.get('/api/test-bartender', requireAuth, async (req, res) => {
     const ipRes = await fetchWithTimeout('https://api.ipify.org?format=json', {}, 5000);
     const ipData = await ipRes.json();
     // נסה להגיע לברטנדר
-    const result = await fetchWithTimeout('https://80.179.245.89:443', {}, 10000);
+    const result = await fetchWithTimeout('http://80.179.245.89/api/Print', {}, 10000);
     const text = await result.text();
     res.json({ success: true, serverIp: ipData.ip, status: result.status, body: text.substring(0, 200) });
   } catch(err) {
